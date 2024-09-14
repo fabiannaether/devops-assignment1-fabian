@@ -1,0 +1,72 @@
+name: CI/CD pipeline
+
+on:
+  push: # Push event for linting and building on every branch
+    branches:
+      - "**" # Run lint and build on any branch push
+  pull_request: # Trigger audit only when PR is merged into release branch
+    types:
+      - closed
+    branches:
+      - release
+
+jobs:
+  # Linting job
+  lint:
+    name: Lint code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run lint
+        run: npm run lint
+
+  # Build job
+  build:
+    name: Build application
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build app
+        run: npm run build
+
+  # Audit job (only runs after PR is merged to 'release')
+  audit:
+    name: Audit dependencies
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release' && contains(github.event.head_commit.message, 'Merge pull request')
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run npm audit
+        run: npm audit
