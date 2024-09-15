@@ -8,7 +8,7 @@ Containerize a web application and build a CI/CD pipeline.<br>
 
 ## Task
 
-### 1. Containerize a Next.js web app and create a CI/CD pipeline using GitHub Actions.
+### 1. Containerize a Next.js web app and create a CI/CD pipeline using GitHub Actions
 
 **Steps for the pipeline:** Set up linting, building, and auditing stages in the pipeline.<br>
 **Triggers:** Different triggers for each stage
@@ -23,7 +23,7 @@ Containerize a web application and build a CI/CD pipeline.<br>
 
 ## Solution
 
-### 1. Containerize a Next.js web app and create a CI/CD pipeline using GitHub Actions.
+### 1. Containerize a Next.js web app and create a CI/CD pipeline using GitHub Actions
 
 - Create necessary branches
 
@@ -136,7 +136,7 @@ jobs:
 - Create new _Docker Hub_ repository secrets<br>
   ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/secrets_docker-hub.png?raw=true)
 
-- Create Docker Hub repository<br>
+- Create Docker Hub repository: [Docker Hub repository](https://hub.docker.com/repository/docker/fabiannaether/startup-nextjs-fabian/general)<br>
   ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/create_docker-hub-repository.png?raw=true)
 
 - Add Docker build and push job in GitHub Actions pipeline
@@ -219,7 +219,7 @@ jobs:
   ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/create_azure-web-app.png?raw=true)<br>
 - Update web app settings in Azure deployment center<br>
   ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/settings_azure-deployment-center.png?raw=true)<br>
-- Start Azure web app<br>
+- Start Azure web app: [Azure web app](https://startupnextjsfabian.azurewebsites.net)<br>
   ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/start_azure-web-app-1.png?raw=true)<br>
   ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/start_azure-web-app-2.png?raw=true)
 
