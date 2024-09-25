@@ -10,6 +10,14 @@ const nextConfig = {
       },
     ],
   },
+  rewrites: async () => {
+    return [
+      {
+        source: "/health",
+        destination: "/api/health",
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;
