@@ -1,227 +1,231 @@
-# DevOps UE: Assignment 1<br>CI/CD pipeline in GitHub Actions for a web app
+# DevOps UE: Assignment 2<br>Docker and Dockerfile deploy to a local K8s cluster
 
 ## Objective
 
-Containerize a web application and build a CI/CD pipeline.<br>
-**Focus:** Create a CI/CD pipeline for a simple web application using DevOps tools.<br>
-**Prerequisite:** Understanding of relevant lecture material is required.
+**Assignment objective:** Gain insights into Kubernetes and container orchestration.<br>
+**Key concepts:** Pods, ReplicaSets, and Deployments in Kubernetes.<br>
+**Requirements:** Utilize a local Kubernetes cluster (e.g., Kind, Rancher).
 
 ## Task
 
-### 1. Containerize a Next.js web app and create a CI/CD pipeline using GitHub Actions
-
-**Steps for the pipeline:** Set up linting, building, and auditing stages in the pipeline.<br>
-**Triggers:** Different triggers for each stage
-
-- The lint step should be run on each push to the repository and on every branch.
-- The build step should be run on each push to the repository and on every branch.
-- The audit step should only be run when merging to the _main_ or _release_ branch.
-
-### 2. Images pushed to a Docker Hub repository during the release pipeline
-
-### 3. Web app is being deployed on Azure Container Apps
+- Deploy a containerized web application on your local Kubernetes cluster.
+- Implement a rolling update strategy for zero-downtime deployments.
+- Scale the application by adjusting replica counts using Kubernetes commands.
+- The application should be accessed by your local machine.
 
 ## Solution
 
-### 1. Containerize a Next.js web app and create a CI/CD pipeline using GitHub Actions
+### 1. Add a liveness / health endpoint in the web app
 
-- Create necessary branches
+- Add a `health.ts` file to provide a liveness and readiness check for Kubernetes
 
-  - release (default)
-  - dev
+  - Created file at `src/pages/api/health.ts` with the following content:
 
-- Create a Dockerfile for a multi-stage build
+  ```
+  export default function handler(req, res) {
+    res.status(200).json({ status: "ok" });
+  }
+  ```
 
-```
-# Stage 1: Build the application
-FROM node:20 AS builder
-WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
+  - Update `next.config.js` to include the health endpoint rewrite:
 
-# Stage 2: Production-ready image
-FROM node:20-alpine AS runner
-WORKDIR /app
-COPY --from=builder /app ./
-EXPOSE 3000
-ENV NODE_ENV=production
-CMD ["npm", "run", "start"]
-```
+  ```
+  rewrites: async () => {
+    return [
+      {
+        source: "/health",
+        destination: "/api/health",
+      },
+    ];
+  },
+  ```
 
-- Write GitHub Actions pipeline:
+### 2. Push the web app to a image registry (DockerHub)
 
-```
-name: CI/CD pipeline
+**Merge pull request from f/assignment2 to release pipeline using GitHub Actions:**
 
-on:
-  push: # Push event for linting and building on every branch
-    branches:
-      - "**" # Run lint and build on any branch push
-  pull_request: # Trigger audit only when PR is merged into release branch
-    types:
-      - closed
-    branches:
-      - release
+- Build the Docker image for the web app
+- Push the Docker image to DockerHub, ensuring it is available for the Kubernetes cluster deployment
 
-jobs:
-  # Linting job
-  lint:
-    name: Lint code
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+### 3. Scaling strategies
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+1. Rolling update strategy
 
-      - name: Install dependencies
-        run: npm install
+- The deployment is configured with a rolling update strategy to gradually replace Pods, ensuring zero downtime during the process.
 
-      - name: Run lint
-        run: npm run lint
+2. Horizontal Pod Autoscaler (HPA)
 
-  # Build job
-  build:
-    name: Build application
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+- Configure a `nextjs-hpa.yaml` file to monitor CPU utilization and automatically scale the number of replicas between 3 and 10.
+- This ensures that the application can handle increased traffic without downtime while maintaining optimal resource utilization.
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
+### 4. How to assert that the deployment works as expected?
 
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build app
-        run: npm run build
-
-  # Audit job (only runs after PR is merged to 'release')
-  audit:
-    name: Audit dependencies
-    if: github.event_name == 'push' && github.ref == 'refs/heads/release' && contains(github.event.head_commit.message, 'Merge pull request')
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run npm audit
-        run: npm audit
-```
-
-- Test the implementation<br>
-  **Dev-Branch**<br>![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/test_dev-branch.png?raw=true)<br>
-  **Release-Branch**<br>![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/test_release-branch.png?raw=true)
-
-### 2. Images pushed to a Docker Hub repository during the release pipeline
-
-- Create new _Docker Hub_ repository secrets<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/secrets_docker-hub.png?raw=true)
-
-- Create Docker Hub repository: [Docker Hub repository](https://hub.docker.com/repository/docker/fabiannaether/startup-nextjs-fabian/general)<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/create_docker-hub-repository.png?raw=true)
-
-- Add Docker build and push job in GitHub Actions pipeline
+1. Apply Kubernetes configuration files
 
 ```
-  # Docker build and push job (only runs after PR is merged to 'release')
-  docker:
-    name: Build and push Docker image
-    if: github.event_name == 'push' && github.ref == 'refs/heads/release' && contains(github.event.head_commit.message, 'Merge pull request')
-    runs-on: ubuntu-latest
-    needs: audit
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set up Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-
-      - name: Build and push Docker image
-        run: |
-          docker build -t ${{ secrets.DOCKER_HUB_USERNAME }}/startup-nextjs-fabian:latest .
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/startup-nextjs-fabian:latest
+kubectl apply -f k8s/nextjs-deployment.yaml
+kubectl apply -f k8s/nextjs-service.yaml
+kubectl apply -f k8s/nextjs-hpa.yaml
 ```
 
-- Check image in Docker Hub<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/check_docker-hub-repository.png?raw=true)
+2. Access test
 
-### 3. Web app is being deployed on Azure Container Apps
+- Open `http://localhost:3000` in a browser to confirm that the web application is accessible on my local machine.
 
-- Create Azure resource group<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/create_azure-resource-group.png?raw=true)<br>
-- Create Azure container registry<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/create_azure-container-registry.png?raw=true)<br>
-- Get _ACR_ access keys
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/get_azure-access-keys.png?raw=true)<br>
-- Create _Contentful_ API keys (Access token and space ID)<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/create_contentful-api-keys.png?raw=true)<br>
-- Create new _ACR_ and _Contentful_ repository secrets<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/secrets_acr_contentful.png?raw=true)<br>
-- Add deployment job in GitHub Actions pipeline
+3. Health check
+
+- Access the `/health` endpoint (`http://localhost:3000/health`) to ensure that the web application is running and healthy.
+
+4. Benchmarking the application
+
+- Use Apache Benchmark (`ab`) to test the application's performance:
+  ```
+  ab -n 10000 -c 100 http://localhost:3000/
+  ```
+- There were no failed requests and the application handled the load efficiently.
+
+  ```
+  Benchmarking localhost (be patient)
+  Completed 1000 requests
+  Completed 2000 requests
+  Completed 3000 requests
+  Completed 4000 requests
+  Completed 5000 requests
+  Completed 6000 requests
+  Completed 7000 requests
+  Completed 8000 requests
+  Completed 9000 requests
+  Completed 10000 requests
+  Finished 10000 requests
+
+  Server Software:
+  Server Hostname:        localhost
+  Server Port:            3000
+
+  Document Path:          /
+  Document Length:        176788 bytes
+
+  Concurrency Level:      100
+  Time taken for tests:   41.527 seconds
+  Complete requests:      10000
+  Failed requests:        0
+  Total transferred:      1771270000 bytes
+  HTML transferred:       1767880000 bytes
+  Requests per second:    240.81 [#/sec] (mean)
+  Time per request:       415.266 [ms] (mean)
+  Time per request:       4.153 [ms] (mean, across all concurrent requests)
+  Transfer rate:          41654.12 [Kbytes/sec] received
+
+  Connection Times (ms)
+                min   mean[+/-sd]   median   max
+  Connect:        0       0   0.5        0     2
+  Processing:    10     407 301.7      393  3029
+  Waiting:        8     403 300.2      390  3025
+  Total:         10     407 301.7      393  3029
+
+  Percentage of the requests served within a certain time (ms)
+    50%    393
+    66%    488
+    75%    530
+    80%    553
+    90%    633
+    95%    726
+    98%    908
+    99%   1668
+    100%  3029 (longest request)
+  ```
+
+5. Scaling verification
+
+- Monitor the Horizontal Pod Autoscaler using `kubectl get hpa` to verify that the number of replicas adjusted correctly based on CPU usage.
 
 ```
-# Deployment job (only runs after PR is merged to 'release')
-  deploy:
-    name: Deploy Docker image to Azure Container Apps
-    if: github.event_name == 'push' && github.ref == 'refs/heads/release' && contains(github.event.head_commit.message, 'Merge pull request')
-    runs-on: ubuntu-latest
-    needs: docker
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to Azure Container Registry
-        uses: azure/docker-login@v2
-        with:
-          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and publish
-        uses: docker/build-push-action@v6
-        with:
-          push: true
-          build-args: |
-            CONTENTFUL_SPACE_ID=${{ secrets.NEXT_PUBLIC_CONTENTFUL_SPACE_ID }}
-            CONTENTFUL_ACCESS_TOKEN=${{ secrets.NEXT_PUBLIC_CONTENTFUL_ACCESS_TOKEN }}
-          tags: ${{ secrets.ACR_LOGIN_SERVER }}/startup-nextjs-fabian:latest
-          file: ./Dockerfile
+NAME                 REFERENCE                          TARGETS         MINPODS   MAXPODS   REPLICAS
+startup-nextjs-hpa   Deployment/startup-nextjs-fabian   <unknown>/50%   3         10        0
 ```
 
-- Check Docker image in repository of Azure container registry<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/check_docker-image-repository.png?raw=true)<br>
-- Create Azure web app<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/create_azure-web-app.png?raw=true)<br>
-- Update web app settings in Azure deployment center<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/settings_azure-deployment-center.png?raw=true)<br>
-- Start Azure web app: [Azure web app](https://startupnextjsfabian.azurewebsites.net)<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/start_azure-web-app-1.png?raw=true)<br>
-  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/dev/images/start_azure-web-app-2.png?raw=true)
+### 5. YAML files
+
+1. Deployment YAML (`k8s/nextjs-deployment.yaml`)
+
+- The `nextjs-deployment.yaml` defines the deployment with a rolling update strategy, liveness and readiness probes.
+
+```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: startup-nextjs-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: startup-nextjs-fabian
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: startup-nextjs-fabian
+    spec:
+      containers:
+        - name: startup-nextjs-fabian
+          image: fabiannaether/startup-nextjs-fabian:latest
+          ports:
+            - containerPort: 3000
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+```
+
+2. Service YAML (`k8s/nextjs-service.yaml`)
+
+- The `nextjs-service.yaml` defines a LoadBalancer service to expose the application, enabling access from outside the Kubernetes cluster.
+
+```
+apiVersion: v1
+kind: Service
+metadata:
+  name: startup-nextjs-service
+spec:
+  selector:
+    app: startup-nextjs-fabian
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+  type: LoadBalancer
+```
+
+3. Horizontal Pod Autoscaler YAML (`k8s/nextjs-hpa.yaml`)
+
+- The `nextjs-hpa.yaml` configures the HPA to scale based on CPU utilization.
+
+```
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: startup-nextjs-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: startup-nextjs-fabian
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 50
+```
 
 ## Contributor
 
