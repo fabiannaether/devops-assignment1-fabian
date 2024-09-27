@@ -239,7 +239,7 @@ The desired behaviour for this deployment is to have a responsive, scalable web 
 
 - The `HorizontalPodAutoscaler` (HPA) is set up to monitor CPU usage and scale replicas between 3 and 10, ensuring that the application can handle varying traffic loads efficiently.
 
-3. Liveness and Readiness Probes
+3. Liveness and readiness probes
 
 - The liveness and readiness probes monitor the application's health at `/health` to ensure that the Pods are ready to serve traffic.
 
