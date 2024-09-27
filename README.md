@@ -227,6 +227,26 @@ spec:
   targetCPUUtilizationPercentage: 50
 ```
 
+**Desired behaviour:**
+
+The desired behaviour for this deployment is to have a responsive, scalable web application that maintains zero-downtime and adjusts according to traffic:
+
+1. Zero downtime
+
+- The `RollingUpdate` strategy with `maxSurge: 1` and `maxUnavailable: 0` ensures that at least one new Pod is created before an old Pod is terminated, preventing any service disruption.
+
+2. Scalability
+
+- The `HorizontalPodAutoscaler` (HPA) is set up to monitor CPU usage and scale replicas between 3 and 10, ensuring that the application can handle varying traffic loads efficiently.
+
+3. Liveness and Readiness Probes
+
+- The liveness and readiness probes monitor the application's health at `/health` to ensure that the Pods are ready to serve traffic.
+
+4. Monitoring the HPA
+
+- By running `kubectl get hpa`, I can verify that the HPA is scaling the application correctly based on the CPU utilization metrics.
+
 ## Contributor
 
 Fabian Näther
