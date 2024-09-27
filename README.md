@@ -19,7 +19,7 @@
 
 - Add a `health.ts` file to provide a liveness and readiness check for Kubernetes
 
-  - Created file at `src/pages/api/health.ts` with the following content:
+  - Create file at `src/pages/api/health.ts` with the following content:
 
   ```
   export default function handler(req, res) {
