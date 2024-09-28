@@ -68,15 +68,32 @@ kubectl apply -f k8s/nextjs-service.yaml
 kubectl apply -f k8s/nextjs-hpa.yaml
 ```
 
-2. Access test
+2. Check Pod status
 
-- Open `http://localhost:3000` in a browser to confirm that the web application is accessible on my local machine.
+```
+kubectl get pods
+```
 
-3. Health check
+- The output confirms that three pods have been successfully deployed, and each one is running as expected. The three pods are created because the `replicas: 3` configuration was specified in the deployment YAML file, ensuring high availability and load balancing.
 
-- Access the `/health` endpoint (`http://localhost:3000/health`) to ensure that the web application is running and healthy.
+```
+NAME                                         READY   STATUS
+startup-nextjs-deployment-669994b76f-6v8qw   1/1     Running
+startup-nextjs-deployment-669994b76f-d9t6k   1/1     Running
+startup-nextjs-deployment-669994b76f-rstpq   1/1     Running
+```
 
-4. Benchmarking the application
+3. Access test
+
+- Open `http://localhost:3000` in a browser to confirm that the web application is accessible on my local machine.<br>
+  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/f/assignment2/images/access_test-assignment2.png?raw=true)
+
+4. Health check
+
+- Access the `/health` endpoint (`http://localhost:3000/health`) to ensure that the web application is running and healthy.<br>
+  ![alt text](https://github.com/fabiannaether/devops-assignment1-fabian/blob/f/assignment2/images/health_check-assignment2.png?raw=true)
+
+5. Benchmarking the application
 
 - Use Apache Benchmark (`ab`) to test the application's performance:
   ```
@@ -135,7 +152,7 @@ kubectl apply -f k8s/nextjs-hpa.yaml
     100%  3029 (longest request)
   ```
 
-5. Scaling verification
+6. Scaling verification
 
 - Monitor the Horizontal Pod Autoscaler using `kubectl get hpa` to verify that the number of replicas adjusted correctly based on CPU usage.
 
