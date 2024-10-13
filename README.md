@@ -129,7 +129,7 @@ resource "azurerm_linux_web_app" "webapp" {
 # Terraform job
   terraform:
     name: Deploy web app to Azure using Terraform
-    if: env.ENVIRONMENT == 'production'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/release' && contains(github.event.head_commit.message, 'Merge pull request')
     runs-on: ubuntu-latest
     needs: build
 
