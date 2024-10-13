@@ -125,7 +125,7 @@ jobs:
   # Terraform job
   terraform:
     name: Deploy web app to Azure using Terraform
-    if: github.ref == 'refs/heads/f/release'
+    if: env.ENVIRONMENT == 'production'
     runs-on: ubuntu-latest
     needs: build
 
