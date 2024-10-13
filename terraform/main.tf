@@ -4,7 +4,7 @@ resource "azurerm_resource_group" "rg" {
   location = "westus"
 }
 
-# 2. Create the Container Registry
+# 2. Create the container registry
 resource "azurerm_container_registry" "acr" {
   name                = "nextjsacrfabian"
   resource_group_name = azurerm_resource_group.rg.name
@@ -13,7 +13,7 @@ resource "azurerm_container_registry" "acr" {
   admin_enabled       = true
 }
 
-# Create the Linux App Service Plan
+# Create the Linux app service plan
 resource "azurerm_service_plan" "appserviceplan" {
   name                = "nextjs-asp-fabian"
   location            = azurerm_resource_group.rg.location
